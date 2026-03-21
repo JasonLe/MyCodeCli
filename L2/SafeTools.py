@@ -1,14 +1,16 @@
 # http://learn.shareai.run/zh/s01/
 import os
 import subprocess
+from pathlib import Path
 from typing import List
 
 from langchain_core.messages import SystemMessage, HumanMessage, BaseMessage, AIMessage, ToolMessage
 from langchain_core.tools import tool
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from dotenv import load_dotenv
-
 load_dotenv()
+
+WORK_DIR = Path(r"D:\Code\pyCode\MyCodeCli")
 
 llm = ChatNVIDIA(
   model="qwen/qwen3.5-122b-a10b",
@@ -35,8 +37,29 @@ def run_bash(command: str):
         return "错误: 超时120s"
 
 
-llm = llm.bind_tools([run_bash])
+def safe_path(p: str):
+    path = (WORK_DIR / p).resolve()
+    if not path.is_relative_to(WORK_DIR):
+        raise ValueError(f"路径错误:{p}")
+    return path
 
+@tool
+def read_file(p: str, limit: int = None):
+    """读取文件"""
+    text = safe_path(p).read_text()
+    lines = text.splitlines()
+    if limit and limit < len(lines):
+        lines = lines[:limit]
+    return lines
+
+
+TOOL_HANDLERS = {
+    "bash": lambda **kwargs: run_bash.invoke(kwargs),
+    "read_file": lambda **kwargs: read_file.invoke(kwargs),
+}
+
+
+llm = llm.bind_tools([run_bash, read_file])
 
 def agent_loop(messages: list):
     while True:
@@ -48,15 +71,18 @@ def agent_loop(messages: list):
 
         for tool_call in response.tool_calls:
             print(f"调用工具:{tool_call['name']}")
-            if tool_call["name"] == "run_bash":
-                output = run_bash.invoke(tool_call["args"])
-                print(output[:200])
-                messages.append(ToolMessage(content=output[:200], tool_call_id=tool_call['id']))
+            tool = TOOL_HANDLERS.get(tool_call["name"])
+            if not tool:
+                raise ValueError(f'工具名称不匹配{tool_call["name"]}')
+
+            output = tool(**tool_call["args"])
+            print(output[:200])
+            messages.append(ToolMessage(content=output[:200], tool_call_id=tool_call['id']))
 
 
 if __name__ == '__main__':
     history_messages: List[BaseMessage] = [
-        SystemMessage(content=f"你是{os.getcwd()}的一名编码助手。使用 run_bash 完成任务。行动起来，无需解释。")
+        SystemMessage(content=f"你是{os.getcwd()}的一名编码助手。使用工具完成任务。行动起来，无需解释。")
     ]
     while True:
         try:
@@ -68,7 +94,3 @@ if __name__ == '__main__':
         history_messages.append(HumanMessage(content=query))
         agent_loop(history_messages)
         print()
-
-
-
-
