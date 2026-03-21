@@ -10,7 +10,7 @@ from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from dotenv import load_dotenv
 load_dotenv()
 
-WORK_DIR = Path(r"D:\Code\pyCode\MyCodeCli")
+WORK_DIR = Path(os.getenv("WORK_DIR"))
 
 llm = ChatNVIDIA(
   model="qwen/qwen3.5-122b-a10b",
@@ -50,7 +50,7 @@ def read_file(p: str, limit: int = None):
     lines = text.splitlines()
     if limit and limit < len(lines):
         lines = lines[:limit]
-    return lines
+    return "\n".join(lines)
 
 
 TOOL_HANDLERS = {
