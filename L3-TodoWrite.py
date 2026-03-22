@@ -1,4 +1,4 @@
-# http://learn.shareai.run/zh/s01/
+# http://learn.shareai.run/zh/s03/
 import os
 import subprocess
 from pathlib import Path

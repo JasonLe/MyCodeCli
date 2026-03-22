@@ -26,7 +26,7 @@ pip install langchain-core langchain-nvidia-ai-endpoints
 ### 运行
 
 ```bash
-python L1/AgentLoop.py
+python L1-AgentLoop.py
 ```
 
 ## 项目结构
